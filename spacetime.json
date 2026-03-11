@@ -1,0 +1,8 @@
+{
+  "dev": {
+    "run": "bun run dev"
+  },
+  "module-path": "./spacetimedb",
+  "database": "color-block-bd7pc",
+  "server": "maincloud"
+}
