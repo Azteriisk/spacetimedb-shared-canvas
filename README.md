@@ -42,26 +42,27 @@ git clone <repo-url>
 cd shared-canvas
 ```
 
-**2. Initialize environment:**
+**2. Configure your environment:**
 ```bash
 bun scripts/setup.js
 ```
-The setup script will create a `.env.local` file. You **must** edit this file and provide your own keys:
+The script will create a template file at `spacetimedb/src/admin.ts`. You **must** edit this file:
 
-*   `VITE_SPACETIMEDB_DB_NAME`: The name you want for your database.
+*   `DB_NAME`: The name you want for your database.
+*   `ADMIN_CLERK_ID`: Your Clerk User ID (found in the "Users" section of your [Clerk Dashboard](https://dashboard.clerk.com)).
+
+**3. Provide Authentication Keys:**
+The setup script also created a `.env.local` file. Edit it to provide your Clerk keys:
 *   `VITE_CLERK_PUBLISHABLE_KEY`: Found in your [Clerk Dashboard](https://dashboard.clerk.com).
 *   `CLERK_SECRET_KEY`: Found in your [Clerk Dashboard](https://dashboard.clerk.com).
-*   `VITE_ADMIN_CLERK_ID`: Your Clerk User ID (found in the "Users" section of Clerk Dashboard) if you want to use Admin features.
 
-**3. Configure Admin Access (Optional):**
-To use the Admin panel (Snapshots/Wipe), edit `spacetimedb/src/admin.ts` and set your `ADMIN_CLERK_ID` to match your Clerk User ID.
-
-**4. Finalize Setup:**
-Run the setup script again once your keys are set:
+**4. Finalize and Publish:**
+Run the setup script again once your configuration is complete:
 ```bash
 bun scripts/setup.js
 ```
-This will publish your module to SpacetimeDB and generate the necessary client-side bindings.
+This script will automatically synchronize your `DB_NAME` and `ADMIN_CLERK_ID` to all necessary configuration files, publish your module to SpacetimeDB, and generate your client-side bindings.
+
 
 ### Local Development
 

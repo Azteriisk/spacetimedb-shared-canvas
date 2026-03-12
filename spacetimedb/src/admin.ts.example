@@ -1,2 +1,3 @@
-// Copy this file to admin.ts and fill in your Clerk User ID
+// Copy this file to admin.ts and fill in your Clerk User ID and DB Name
 export const ADMIN_CLERK_ID = 'user_REPLACE_ME';
+export const DB_NAME = 'REPLACE_WITH_YOUR_DB_NAME';
