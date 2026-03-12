@@ -124,7 +124,9 @@ export const saveSnapshot = spacetimedb.reducer(
 export const loadSnapshot = spacetimedb.reducer(
   { snapshotId: t.u64(), clerkId: t.string() },
   (ctx, { snapshotId, clerkId }) => {
-    if (clerkId !== ADMIN_CLERK_ID) throw new Error("Unauthorized");
+    if (clerkId !== ADMIN_CLERK_ID) {
+      throw new Error("Unauthorized");
+    }
 
     // Wipe current canvas
     const coordsToDelete: string[] = [];
