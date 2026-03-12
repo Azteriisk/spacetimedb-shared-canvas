@@ -50,6 +50,7 @@ function App() {
   const [mounted, setMounted] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'wipe' | 'load' | 'delete'; id?: bigint; name?: string } | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -292,7 +293,10 @@ function App() {
           }}>
             {/* Admin Toggle Button */}
         <button
-          onClick={() => setShowAdminPanel(p => !p)}
+          onClick={() => {
+            setShowAdminPanel(p => !p);
+            if (showHelp) setShowHelp(false);
+          }}
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             background: negativeMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -574,11 +578,52 @@ function App() {
 
         {/* Controls Help */}
         <div style={{ position: 'relative' }}>
+          {showHelp && (
+            <div style={{
+              position: 'absolute', bottom: 64, right: 0,
+              background: negativeMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(16px)',
+              borderRadius: 20,
+              border: negativeMode ? '1px solid rgba(55, 65, 81, 0.6)' : '1px solid rgba(229, 231, 235, 0.6)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              padding: '20px',
+              minWidth: 260,
+              zIndex: 100,
+              fontFamily: 'Inter, system-ui, sans-serif'
+            }}>
+              <div style={{ color: negativeMode ? '#F9FAFB' : '#111827', fontSize: 13, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>📖</span> How to Play
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { icon: '🖱️', label: 'Left Click', detail: 'Paint a tile' },
+                  { icon: '🖌️', label: 'Drag', detail: 'Continuous painting' },
+                  { icon: '✋', label: 'Right/Mid Click', detail: 'Pan the canvas' },
+                  { icon: '🔍', label: 'Scroll', detail: 'Zoom in/out' },
+                  { icon: '⌨️', label: '0-9 Keys', detail: 'Switch colors' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 16, width: 24, textAlign: 'center' }}>{item.icon}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: negativeMode ? '#E5E7EB' : '#1F2937' }}>{item.label}</span>
+                      <span style={{ fontSize: 11, color: negativeMode ? '#9CA3AF' : '#6B7280' }}>{item.detail}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <button
-            onClick={() => alert("Left Click: Paint\nDrag: Continuous Paint\nRight/Mid Click: Pan\nScroll: Zoom\n0-9 keys: Quick Color")}
+            onClick={() => {
+              setShowHelp(h => !h);
+              if (showAdminPanel) setShowAdminPanel(false);
+            }}
             style={{
-              width: 48, height: 48, borderRadius: 16, background: negativeMode ? '#374151' : '#F3F4F6', color: negativeMode ? '#D1D5DB' : '#6B7280',
-              border: negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 48, height: 48, borderRadius: 16, 
+              background: showHelp ? (negativeMode ? '#3B82F6' : '#E0E7FF') : (negativeMode ? '#374151' : '#F3F4F6'),
+              color: showHelp ? (negativeMode ? '#FFFFFF' : '#3B82F6') : (negativeMode ? '#D1D5DB' : '#6B7280'),
+              border: showHelp ? '1px solid #3B82F6' : (negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB'), 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20, fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
             }}
             title="Help Instructions"
