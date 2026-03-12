@@ -10,6 +10,25 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const Snapshot = __t.object("Snapshot", {
+  id: __t.u64(),
+  name: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type Snapshot = __Infer<typeof Snapshot>;
+
+export const SnapshotTile = __t.object("SnapshotTile", {
+  id: __t.u64(),
+  snapshotId: __t.u64(),
+  coords: __t.string(),
+  x: __t.i32(),
+  y: __t.i32(),
+  color: __t.i32(),
+  ownerIdentity: __t.string(),
+  clerkId: __t.string(),
+});
+export type SnapshotTile = __Infer<typeof SnapshotTile>;
+
 export const Tile = __t.object("Tile", {
   coords: __t.string(),
   x: __t.i32(),

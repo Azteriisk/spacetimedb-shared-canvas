@@ -1,11 +1,24 @@
+# Dependencies
 node_modules
-.DS_Store
-.env
-.env.local
+spacetimedb/node_modules
+
+# Build outputs
+dist
+spacetimedb/dist
 .output
 .nitro
-.tanstack
-dist
+
+# Environment & secrets
+.env
+.env.local
+spacetime.local.json
+
+# Logs
 *.log
 
-spacetime.local.json
+# OS & editor
+.DS_Store
+.cursor
+
+# TanStack dev artifacts
+.tanstack

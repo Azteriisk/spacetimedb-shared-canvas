@@ -7,8 +7,16 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AdminResetUserTilesReducer from "../admin_reset_user_tiles_reducer";
+import DeleteSnapshotReducer from "../delete_snapshot_reducer";
+import LoadSnapshotReducer from "../load_snapshot_reducer";
+import SaveSnapshotReducer from "../save_snapshot_reducer";
 import SetTileColorReducer from "../set_tile_color_reducer";
+import WipeCanvasReducer from "../wipe_canvas_reducer";
 
 export type AdminResetUserTilesParams = __Infer<typeof AdminResetUserTilesReducer>;
+export type DeleteSnapshotParams = __Infer<typeof DeleteSnapshotReducer>;
+export type LoadSnapshotParams = __Infer<typeof LoadSnapshotReducer>;
+export type SaveSnapshotParams = __Infer<typeof SaveSnapshotReducer>;
 export type SetTileColorParams = __Infer<typeof SetTileColorReducer>;
+export type WipeCanvasParams = __Infer<typeof WipeCanvasReducer>;
 

@@ -12,6 +12,31 @@ const spacetimedb = schema({
       clerk_id: t.string(),
     }
   ),
+  snapshot: table(
+    { name: 'snapshot', public: true },
+    {
+      id: t.u64().primaryKey().autoInc(),
+      name: t.string(),
+      created_at: t.timestamp(),
+    }
+  ),
+  snapshot_tile: table(
+    {
+      name: 'snapshot_tile',
+      public: true,
+      indexes: [{ name: 'snapshot_tile_snapshot_id', algorithm: 'btree', columns: ['snapshot_id'] }],
+    },
+    {
+      id: t.u64().primaryKey().autoInc(),
+      snapshot_id: t.u64(),
+      coords: t.string(),
+      x: t.i32(),
+      y: t.i32(),
+      color: t.i32(),
+      owner_identity: t.string(),
+      clerk_id: t.string(),
+    }
+  ),
 });
 export default spacetimedb;
 
@@ -64,5 +89,98 @@ export const adminResetUserTiles = spacetimedb.reducer(
     for (const coords of tilesToDelete) {
       ctx.db.tile.coords.delete(coords);
     }
+  }
+);
+
+export const saveSnapshot = spacetimedb.reducer(
+  { name: t.string() },
+  (ctx, { name }) => {
+    if (!name) throw new Error("Snapshot name required");
+
+    // Create a new snapshot record
+    const snapshotRow = ctx.db.snapshot.insert({ id: 0n, name, created_at: ctx.timestamp });
+    const snapshotId = snapshotRow.id;
+
+    // Copy all current tiles into snapshot_tile
+    for (const tile of ctx.db.tile.iter()) {
+      ctx.db.snapshot_tile.insert({
+        id: 0n,
+        snapshot_id: snapshotId,
+        coords: tile.coords,
+        x: tile.x,
+        y: tile.y,
+        color: tile.color,
+        owner_identity: tile.owner_identity,
+        clerk_id: tile.clerk_id,
+      });
+    }
+  }
+);
+
+// Replace this with your actual Clerk User ID for admin access
+const ADMIN_CLERK_ID = 'user_REPLACE_ME';
+
+export const loadSnapshot = spacetimedb.reducer(
+  { snapshotId: t.u64(), clerkId: t.string() },
+  (ctx, { snapshotId, clerkId }) => {
+    if (clerkId !== ADMIN_CLERK_ID) throw new Error("Unauthorized");
+
+    // Wipe current canvas
+    const coordsToDelete: string[] = [];
+    for (const tile of ctx.db.tile.iter()) {
+      coordsToDelete.push(tile.coords);
+    }
+    for (const coords of coordsToDelete) {
+      ctx.db.tile.coords.delete(coords);
+    }
+
+    // Load tiles from the snapshot
+    for (const st of ctx.db.snapshot_tile.iter()) {
+      if (st.snapshot_id === snapshotId) {
+        ctx.db.tile.insert({
+          coords: st.coords,
+          x: st.x,
+          y: st.y,
+          color: st.color,
+          owner_identity: st.owner_identity,
+          clerk_id: st.clerk_id,
+        });
+      }
+    }
+  }
+);
+
+export const wipeCanvas = spacetimedb.reducer(
+  { clerkId: t.string() },
+  (ctx, { clerkId }) => {
+    if (clerkId !== ADMIN_CLERK_ID) throw new Error("Unauthorized");
+
+    const coordsToDelete: string[] = [];
+    for (const tile of ctx.db.tile.iter()) {
+      coordsToDelete.push(tile.coords);
+    }
+    for (const coords of coordsToDelete) {
+      ctx.db.tile.coords.delete(coords);
+    }
+  }
+);
+
+export const deleteSnapshot = spacetimedb.reducer(
+  { snapshotId: t.u64(), clerkId: t.string() },
+  (ctx, { snapshotId, clerkId }) => {
+    if (clerkId !== ADMIN_CLERK_ID) throw new Error("Unauthorized");
+
+    // Delete all tiles in this snapshot
+    const idsToDelete: bigint[] = [];
+    for (const st of ctx.db.snapshot_tile.iter()) {
+      if (st.snapshot_id === snapshotId) {
+        idsToDelete.push(st.id);
+      }
+    }
+    for (const id of idsToDelete) {
+      ctx.db.snapshot_tile.id.delete(id);
+    }
+    // Delete the snapshot record itself
+    ctx.db.snapshot.id.delete(snapshotId);
   }
 );

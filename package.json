@@ -1,13 +1,14 @@
 {
-  "name": "color-block",
+  "name": "shared-canvas",
   "private": true,
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "npx kill-port 5173 && vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "start": "PORT=4000 node .output/server/index.mjs",
+    "setup": "bun scripts/setup.js",
     "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "spacetime:publish:local": "spacetime publish color-block-bd7pc --clear-database -y --module-path spacetimedb --server local",
     "spacetime:publish": "spacetime publish color-block-bd7pc --clear-database -y --module-path spacetimedb --server maincloud"

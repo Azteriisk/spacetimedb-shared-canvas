@@ -5,8 +5,6 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { QueryClient } from '@tanstack/react-query';
 import { ClerkProvider } from '@clerk/tanstack-react-start';
 
@@ -30,15 +28,10 @@ function RootComponent() {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body style={{ margin: 0 }}>
         <ClerkProvider publishableKey={PUBLISHABLE_KEY || 'pk_test_missing_key'} afterSignOutUrl="/">
           <Outlet />
         </ClerkProvider>
-        <ReactQueryDevtools
-          initialIsOpen={false}
-          buttonPosition="bottom-left"
-        />
-        <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
     </html>

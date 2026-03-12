@@ -9,9 +9,9 @@ import {
 } from 'spacetimedb/tanstack';
 import { DbConnection, ErrorContext } from './module_bindings';
 
-const HOST = 'ws://localhost:3000';
-const DB_NAME = 'color-block-bd7pc';
-const TOKEN_KEY = `${HOST}/${DB_NAME}/auth_token`;
+const HOST = import.meta.env.VITE_SPACETIMEDB_HOST ?? 'wss://maincloud.spacetimedb.com';
+const DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME ?? 'REPLACE_WITH_YOUR_DB_NAME';
+const TOKEN_KEY = `spacetimedb/${DB_NAME}/auth_token`;
 
 const spacetimeDBQueryClient = new SpacetimeDBQueryClient();
 

@@ -35,17 +35,45 @@ import {
 
 // Import all reducer arg schemas
 import AdminResetUserTilesReducer from "./admin_reset_user_tiles_reducer";
+import DeleteSnapshotReducer from "./delete_snapshot_reducer";
+import LoadSnapshotReducer from "./load_snapshot_reducer";
+import SaveSnapshotReducer from "./save_snapshot_reducer";
 import SetTileColorReducer from "./set_tile_color_reducer";
+import WipeCanvasReducer from "./wipe_canvas_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import SnapshotRow from "./snapshot_table";
+import SnapshotTileRow from "./snapshot_tile_table";
 import TileRow from "./tile_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  snapshot: __table({
+    name: 'snapshot',
+    indexes: [
+      { name: 'id', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'snapshot_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, SnapshotRow),
+  snapshot_tile: __table({
+    name: 'snapshot_tile',
+    indexes: [
+      { name: 'id', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'snapshot_tile_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, SnapshotTileRow),
   tile: __table({
     name: 'tile',
     indexes: [
@@ -62,7 +90,11 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("admin_reset_user_tiles", AdminResetUserTilesReducer),
+  __reducerSchema("delete_snapshot", DeleteSnapshotReducer),
+  __reducerSchema("load_snapshot", LoadSnapshotReducer),
+  __reducerSchema("save_snapshot", SaveSnapshotReducer),
   __reducerSchema("set_tile_color", SetTileColorReducer),
+  __reducerSchema("wipe_canvas", WipeCanvasReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
