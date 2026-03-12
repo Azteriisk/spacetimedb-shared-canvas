@@ -20,6 +20,16 @@ spacetimedb/src/admin.ts
 # OS & editor
 .DS_Store
 .cursor
+.windsurfrules
+CLAUDE.md
+AGENTS.md
 
 # TanStack dev artifacts
 .tanstack
+
+# AI Agent metadata
+.agents/
+_agents/
+.antigravity/
+.gemini/
+
