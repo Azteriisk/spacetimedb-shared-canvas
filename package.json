@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx kill-port 5173 && vite dev",
-    "build": "vite build",
+    "build": "NITRO_PRESET=vercel vite build",
     "preview": "vite preview",
     "start": "PORT=4000 node .output/server/index.mjs",
     "setup": "bun scripts/setup.js",

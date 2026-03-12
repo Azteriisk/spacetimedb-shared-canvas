@@ -84,6 +84,25 @@ Open [http://localhost:5173](http://localhost:5173) to start drawing!
 | Toggle dark mode | 🌙 button in toolbar |
 | Admin panel | ⚙️ Admin button (signed in as Admin only) |
 
+## Deployment
+
+The easiest way to host this project in my opinion for free is using **Vercel** (an official TanStack partner).
+
+### 1. Connect Repository
+Import your GitHub repository into the [Vercel Dashboard](https://vercel.com). Vercel will automatically detect the **TanStack Start** framework.
+
+### 2. Configure Environment Variables
+During setup (or in Project Settings > Environment Variables), add the following keys:
+
+| Key | Value |
+|-----|-------|
+| `VITE_ADMIN_CLERK_ID` | Your Clerk User ID (`user_...`) |
+| `VITE_SPACETIMEDB_DB_NAME` | Your database name (`color-block-...`) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk Publishable Key (`pk_test_...`) |
+
+### 3. Deploy
+Click **Deploy**. Vercel will build your application using Bun and securely inject your keys. Your local environment will remain unaffected.
+
 ## Development Commands
 
 ```bash
