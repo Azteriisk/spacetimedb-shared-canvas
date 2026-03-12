@@ -4,10 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "npx kill-port 5173 && vite dev",
-    "build": "NITRO_PRESET=vercel bun --bun vite build",
+    "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview",
-    "start": "PORT=4000 node .output/server/index.mjs",
+    "start": "node .output/server/index.mjs",
     "setup": "bun scripts/setup.js",
     "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path spacetimedb",
     "spacetime:publish:local": "spacetime publish --clear-database -y --module-path spacetimedb --server local",
@@ -32,6 +32,7 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.7.2",
     "vite": "^7.1.5",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "nitro": "npm:nitro-nightly@latest"
   }
 }
