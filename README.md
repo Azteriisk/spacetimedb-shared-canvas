@@ -61,7 +61,11 @@ bun scripts/setup.js
 
 > The script will create a `.env.local` template if one doesn't exist.  
 > 1. Fill in your Clerk publishable key from [dashboard.clerk.com](https://dashboard.clerk.com).
-> 2. To use the **Admin capabilities** (Wipe Canvas, Snapshots), go to the Clerk Dashboard -> Users, copy your `user_...` ID, and set it as `VITE_ADMIN_CLERK_ID` in `.env.local`.
+> 2. To use the **Admin capabilities** (Wipe Canvas, Snapshots):
+>    - The setup script created `spacetimedb/src/admin.ts` for you.
+>    - Add your **Clerk User ID** to the `ADMIN_CLERK_ID` constant in that file.
+>    - Add the same User ID to your `.env.local` as `VITE_ADMIN_CLERK_ID`.
+> 3. Update the `DB_NAME` in `src/router.tsx` to match your published database name.
 > 
 > Once configured, run the setup script again.
 

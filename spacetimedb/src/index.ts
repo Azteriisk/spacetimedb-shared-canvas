@@ -1,4 +1,5 @@
 import { schema, table, t } from 'spacetimedb/server';
+import { ADMIN_CLERK_ID } from './admin';
 
 const spacetimedb = schema({
   tile: table(
@@ -117,8 +118,8 @@ export const saveSnapshot = spacetimedb.reducer(
   }
 );
 
-// Replace this with your actual Clerk User ID for admin access
-const ADMIN_CLERK_ID = 'user_REPLACE_ME';
+// Administrative reducers logic starts here...
+
 
 export const loadSnapshot = spacetimedb.reducer(
   { snapshotId: t.u64(), clerkId: t.string() },

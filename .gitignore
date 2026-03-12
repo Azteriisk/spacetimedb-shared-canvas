@@ -12,6 +12,7 @@ spacetimedb/dist
 .env
 .env.local
 spacetime.local.json
+spacetimedb/src/admin.ts
 
 # Logs
 *.log

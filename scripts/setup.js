@@ -86,9 +86,29 @@ if (!existsSync(envPath)) {
     '',
     '# Clerk Auth — get your key from https://dashboard.clerk.com',
     'VITE_CLERK_PUBLISHABLE_KEY=pk_test_REPLACE_ME',
+    '',
+    '# Clerk Admin User ID (for the Admin panel)',
+    'VITE_ADMIN_CLERK_ID=user_REPLACE_ME',
   ].join('\n') + '\n');
-  log.warn('Edit .env.local and add your Clerk publishable key, then re-run this script.');
+  log.warn('Edit .env.local and add your Clerk keys, then re-run this script.');
   process.exit(0);
+}
+
+// ── 3a. Setup admin.ts ──────────────────────────────────────────────────
+log.step('Setting up SpacetimeDB admin config...');
+const adminExamplePath = join(root, 'spacetimedb', 'src', 'admin.ts.example');
+const adminPath = join(root, 'spacetimedb', 'src', 'admin.ts');
+
+if (!existsSync(adminPath)) {
+  if (existsSync(adminExamplePath)) {
+    const adminExampleContent = readFileSync(adminExamplePath, 'utf8');
+    writeFileSync(adminPath, adminExampleContent);
+    log.ok('Created spacetimedb/src/admin.ts from template');
+  } else {
+    log.error('admin.ts.example not found! Please check your repository.');
+  }
+} else {
+  log.info('spacetimedb/src/admin.ts already exists');
 }
 
 const envContent = readFileSync(envPath, 'utf8');

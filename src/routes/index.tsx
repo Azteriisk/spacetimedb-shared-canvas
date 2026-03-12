@@ -336,6 +336,7 @@ function App() {
               />
               <button
                 onClick={async () => {
+                  console.log("Save Snapshot button clicked");
                   if (!snapshotName.trim()) return;
                   try {
                     console.log("Calling saveSnapshot with:", { name: snapshotName.trim() });
@@ -360,6 +361,7 @@ function App() {
             {/* Wipe Canvas */}
             <button
               onClick={async () => {
+                console.log("Wipe Canvas button clicked");
                 if (user?.id && confirm('Wipe the entire canvas? This cannot be undone.')) {
                   try {
                     console.log("Calling wipeCanvas with:", { clerkId: user.id });
@@ -393,6 +395,7 @@ function App() {
                       </span>
                       <button
                         onClick={async () => {
+                          console.log("Load Snapshot clicked:", snap.name);
                           if (user?.id && confirm(`Load "${snap.name}"? Current canvas will be replaced.`)) {
                             try {
                               console.log("Calling loadSnapshot with:", { snapshotId: snap.id, clerkId: user.id });
@@ -407,6 +410,7 @@ function App() {
                       >Load</button>
                       <button
                         onClick={async () => {
+                          console.log("Delete Snapshot clicked:", snap.name);
                           if (user?.id && confirm(`Delete snapshot "${snap.name}"?`)) {
                             try {
                               console.log("Calling deleteSnapshot with:", { snapshotId: snap.id, clerkId: user.id });
