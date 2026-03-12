@@ -23,5 +23,5 @@
 
     "baseUrl": "."
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "spacetimedb/src", "vite.config.ts"]
 }
