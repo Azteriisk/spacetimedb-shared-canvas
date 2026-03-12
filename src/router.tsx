@@ -10,8 +10,13 @@ import {
 import { DbConnection, ErrorContext } from './module_bindings';
 
 const HOST = import.meta.env.VITE_SPACETIMEDB_HOST ?? 'wss://maincloud.spacetimedb.com';
-const DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME ?? 'REPLACE_WITH_YOUR_DB_NAME';
-const TOKEN_KEY = `spacetimedb/${DB_NAME}/auth_token`;
+const DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME;
+
+if (!DB_NAME && typeof window === 'undefined') {
+  console.error('CRITICAL: VITE_SPACETIMEDB_DB_NAME is not set! SpacetimeDB connection will fail during SSR.');
+}
+
+const TOKEN_KEY = `spacetimedb/${DB_NAME || 'fallback'}/auth_token`;
 
 const spacetimeDBQueryClient = new SpacetimeDBQueryClient();
 

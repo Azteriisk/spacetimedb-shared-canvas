@@ -10,6 +10,10 @@ import { ClerkProvider } from '@clerk/tanstack-react-start';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+if (!PUBLISHABLE_KEY && typeof window === 'undefined') {
+  console.error('CRITICAL: VITE_CLERK_PUBLISHABLE_KEY is not set! Clerk will fail during SSR.');
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
     head: () => ({
