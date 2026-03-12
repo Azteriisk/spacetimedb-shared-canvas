@@ -38,8 +38,8 @@ A real-time collaborative pixel canvas powered by [SpacetimeDB](https://spacetim
 
 **1. Clone the repository:**
 ```bash
-git clone <repo-url>
-cd shared-canvas
+git clone https://github.com/Azteriisk/spacetimedb-shared-canvas
+cd spacetimedb-shared-canvas
 ```
 
 **2. Configure your environment:**

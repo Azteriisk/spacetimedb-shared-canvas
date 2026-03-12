@@ -47,6 +47,13 @@ function App() {
   const [negativeMode, setNegativeMode] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [snapshotName, setSnapshotName] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ type: 'wipe' | 'load' | 'delete'; id?: bigint; name?: string } | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isAdmin = user?.id && import.meta.env.VITE_ADMIN_CLERK_ID && user.id === import.meta.env.VITE_ADMIN_CLERK_ID;
 
@@ -302,7 +309,7 @@ function App() {
         </button>
 
         {/* Admin Flyout */}
-        {showAdminPanel && (
+        {mounted && showAdminPanel && (
           <div style={{
             marginTop: 8,
             background: negativeMode ? 'rgba(17, 24, 39, 0.97)' : 'rgba(255, 255, 255, 0.97)',
@@ -311,8 +318,68 @@ function App() {
             border: negativeMode ? '1px solid rgba(55, 65, 81, 0.6)' : '1px solid rgba(229, 231, 235, 0.6)',
             boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
             padding: '16px',
-            minWidth: 240,
+            minWidth: 260,
           }}>
+            {/* Confirmation Overlay */}
+            {pendingAction && (
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                background: negativeMode ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 16, zIndex: 40, padding: 20,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: negativeMode ? '#F9FAFB' : '#111827', marginBottom: 16 }}>
+                  {pendingAction.type === 'wipe' && "Wipe entire canvas?"}
+                  {pendingAction.type === 'load' && `Load "${pendingAction.name}"?`}
+                  {pendingAction.type === 'delete' && `Delete "${pendingAction.name}"?`}
+                  <div style={{ fontSize: 11, fontWeight: 400, color: '#EF4444', marginTop: 4 }}>
+                    {pendingAction.type === 'wipe' ? 'This cannot be undone.' : 'Current canvas will be replaced.'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                  <button
+                    onClick={() => setPendingAction(null)}
+                    disabled={isActionLoading}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: negativeMode ? '#374151' : '#E5E7EB',
+                      color: negativeMode ? '#D1D5DB' : '#374151',
+                      border: 'none', cursor: 'pointer'
+                    }}
+                  >Cancel</button>
+                  <button
+                    onClick={async () => {
+                      if (!user?.id) return;
+                      setIsActionLoading(true);
+                      try {
+                        if (pendingAction.type === 'wipe') {
+                          await wipeCanvasReducer({ clerkId: user.id });
+                        } else if (pendingAction.type === 'load' && pendingAction.id !== undefined) {
+                          await loadSnapshotReducer({ snapshotId: pendingAction.id, clerkId: user.id });
+                        } else if (pendingAction.type === 'delete' && pendingAction.id !== undefined) {
+                          await deleteSnapshotReducer({ snapshotId: pendingAction.id, clerkId: user.id });
+                        }
+                        setPendingAction(null);
+                      } catch (err) {
+                        console.error(`Admin action ${pendingAction.type} failed:`, err);
+                      } finally {
+                        setIsActionLoading(false);
+                      }
+                    }}
+                    disabled={isActionLoading}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: pendingAction.type === 'delete' || pendingAction.type === 'wipe' ? '#EF4444' : '#3B82F6',
+                      color: '#FFFFFF', border: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    {isActionLoading ? 'Processing...' : (pendingAction.type === 'delete' ? 'Delete' : 'Confirm')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{ color: negativeMode ? '#9CA3AF' : '#6B7280', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Canvas Controls</div>
 
             {/* Save Snapshot */}
@@ -321,6 +388,7 @@ function App() {
                 value={snapshotName}
                 onChange={e => setSnapshotName(e.target.value)}
                 placeholder="Snapshot name…"
+                disabled={isActionLoading}
                 style={{
                   flex: 1, padding: '8px 10px', borderRadius: 8, fontSize: 13,
                   background: negativeMode ? '#1F2937' : '#F9FAFB',
@@ -329,47 +397,39 @@ function App() {
                 }}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && snapshotName.trim()) {
-                    saveSnapshotReducer({ name: snapshotName.trim() });
-                    setSnapshotName('');
+                    setIsActionLoading(true);
+                    saveSnapshotReducer({ name: snapshotName.trim(), clerkId: user?.id ?? '' })
+                      .then(() => setSnapshotName(''))
+                      .finally(() => setIsActionLoading(false));
                   }
                 }}
               />
               <button
                 onClick={async () => {
-                  if (!snapshotName.trim()) return;
+                  if (!snapshotName.trim() || !user?.id) return;
+                  setIsActionLoading(true);
                   try {
-                    console.log("Calling saveSnapshot with:", { name: snapshotName.trim() });
-                    await saveSnapshotReducer({ name: snapshotName.trim() });
-                    console.log("Save snapshot SUCCESS");
+                    await saveSnapshotReducer({ name: snapshotName.trim(), clerkId: user.id });
                     setSnapshotName('');
                   } catch (err) {
                     console.error("Save snapshot failed:", err);
+                  } finally {
+                    setIsActionLoading(false);
                   }
                 }}
-                disabled={!snapshotName.trim()}
+                disabled={!snapshotName.trim() || isActionLoading}
                 style={{
                   padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                   background: snapshotName.trim() ? '#3B82F6' : (negativeMode ? '#374151' : '#E5E7EB'),
                   color: snapshotName.trim() ? '#FFFFFF' : (negativeMode ? '#6B7280' : '#9CA3AF'),
                   border: 'none', cursor: snapshotName.trim() ? 'pointer' : 'not-allowed',
                 }}
-                title="Save Snapshot"
-              >💾 Save</button>
+              >{isActionLoading ? '...' : '💾 Save'}</button>
             </div>
 
             {/* Wipe Canvas */}
             <button
-              onClick={async () => {
-                if (user?.id && confirm('Wipe the entire canvas? This cannot be undone.')) {
-                  try {
-                    console.log("Calling wipeCanvas with:", { clerkId: user.id });
-                    await wipeCanvasReducer({ clerkId: user.id });
-                    console.log("Wipe canvas SUCCESS");
-                  } catch (err) {
-                    console.error("Wipe canvas failed:", err);
-                  }
-                }
-              }}
+              onClick={() => setPendingAction({ type: 'wipe' })}
               style={{
                 width: '100%', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                 background: '#EF4444', color: '#FFFFFF', border: 'none', cursor: 'pointer',
@@ -392,31 +452,11 @@ function App() {
                         {snap.name}
                       </span>
                       <button
-                        onClick={async () => {
-                          if (user?.id && confirm(`Load "${snap.name}"? Current canvas will be replaced.`)) {
-                            try {
-                              console.log("Calling loadSnapshot with:", { snapshotId: snap.id, clerkId: user.id });
-                              await loadSnapshotReducer({ snapshotId: snap.id, clerkId: user.id });
-                              console.log("Load snapshot SUCCESS");
-                            } catch (err) {
-                              console.error("Load snapshot failed:", err);
-                            }
-                          }
-                        }}
+                        onClick={() => setPendingAction({ type: 'load', id: snap.id, name: snap.name })}
                         style={{ padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: '#3B82F6', color: '#FFF', border: 'none', cursor: 'pointer' }}
                       >Load</button>
                       <button
-                        onClick={async () => {
-                          if (user?.id && confirm(`Delete snapshot "${snap.name}"?`)) {
-                            try {
-                              console.log("Calling deleteSnapshot with:", { snapshotId: snap.id, clerkId: user.id });
-                              await deleteSnapshotReducer({ snapshotId: snap.id, clerkId: user.id });
-                              console.log("Delete snapshot SUCCESS");
-                            } catch (err) {
-                              console.error("Delete snapshot failed:", err);
-                            }
-                          }
-                        }}
+                        onClick={() => setPendingAction({ type: 'delete', id: snap.id, name: snap.name })}
                         style={{ padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: '#EF4444', color: '#FFF', border: 'none', cursor: 'pointer' }}
                       >✕</button>
                     </div>

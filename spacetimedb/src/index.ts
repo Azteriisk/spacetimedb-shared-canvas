@@ -94,8 +94,9 @@ export const adminResetUserTiles = spacetimedb.reducer(
 );
 
 export const saveSnapshot = spacetimedb.reducer(
-  { name: t.string() },
-  (ctx, { name }) => {
+  { name: t.string(), clerkId: t.string() },
+  (ctx, { name, clerkId }) => {
+    if (clerkId !== ADMIN_CLERK_ID) throw new Error("Unauthorized");
     if (!name) throw new Error("Snapshot name required");
 
     // Create a new snapshot record
