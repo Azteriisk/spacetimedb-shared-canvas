@@ -81,16 +81,23 @@ if (!existsSync(envPath)) {
   log.warn('.env.local not found — creating a template');
   writeFileSync(envPath, [
     '# SpacetimeDB (maincloud)',
-    'VITE_SPACETIMEDB_DB_NAME=color-block-bd7pc',
+    '# The name you want to give your database',
+    'VITE_SPACETIMEDB_DB_NAME=REPLACE_WITH_YOUR_DB_NAME',
     'VITE_SPACETIMEDB_HOST=wss://maincloud.spacetimedb.com',
     '',
-    '# Clerk Auth — get your key from https://dashboard.clerk.com',
+    '# Clerk Auth — get your keys from https://dashboard.clerk.com',
     'VITE_CLERK_PUBLISHABLE_KEY=pk_test_REPLACE_ME',
+    'CLERK_SECRET_KEY=sk_test_REPLACE_ME',
     '',
     '# Clerk Admin User ID (for the Admin panel)',
+    '# Your User ID which you can find in the Clerk Dashboard',
     'VITE_ADMIN_CLERK_ID=user_REPLACE_ME',
   ].join('\n') + '\n');
-  log.warn('Edit .env.local and add your Clerk keys, then re-run this script.');
+  log.warn('Created .env.local template.');
+  log.info('1. Create your SpacetimeDB account: https://spacetimedb.com');
+  log.info('2. Create your Clerk account: https://clerk.com');
+  log.info('3. Edit .env.local with your real keys and desired DB name.');
+  log.info('4. Then re-run this script.');
   process.exit(0);
 }
 
@@ -112,25 +119,30 @@ if (!existsSync(adminPath)) {
 }
 
 const envContent = readFileSync(envPath, 'utf8');
-if (envContent.includes('REPLACE_ME')) {
-  log.warn('.env.local found but VITE_CLERK_PUBLISHABLE_KEY is not set.');
-  log.info('Edit .env.local with your real Clerk key, then re-run.');
+if (envContent.includes('REPLACE_ME') || envContent.includes('REPLACE_WITH_YOUR_DB_NAME')) {
+  log.warn('.env.local found but some values are still placeholders.');
+  log.info('Edit .env.local with your real Clerk keys and DB name, then re-run.');
   process.exit(0);
 }
+
+// Extract DB Name
+const dbNameMatch = envContent.match(/VITE_SPACETIMEDB_DB_NAME=(.+)/);
+const dbName = dbNameMatch ? dbNameMatch[1].trim() : 'my-shared-canvas';
+
 log.ok('.env.local configured');
 
 // ── 4. Publish module to maincloud ─────────────────────────────────────────
-log.step('Publishing module to maincloud...');
+log.step(`Publishing module "${dbName}" to maincloud...`);
 
 // Check if DB already exists — if so, warn before overwriting
 const probe = spawnSync(
-  'spacetime logs color-block-bd7pc --server maincloud -n 1',
+  `spacetime logs ${dbName} --server maincloud -n 1`,
   { shell: true, stdio: 'pipe' }
 );
 const alreadyExists = probe.status === 0;
 
 if (alreadyExists) {
-  log.warn('⚠️  Database "color-block-bd7pc" already exists on maincloud.');
+  log.warn(`⚠️  Database "${dbName}" already exists on maincloud.`);
   log.warn('   Republishing will OVERWRITE existing data (snapshots, canvas, etc.).');
   process.stdout.write(`\n  Type ${c.bold}YES${c.reset} to continue, or anything else to cancel: `);
   const buf = Buffer.alloc(64);
@@ -142,9 +154,9 @@ if (alreadyExists) {
   }
 }
 
-run('spacetime publish color-block-bd7pc --module-path spacetimedb --server maincloud -y');
+run(`spacetime publish ${dbName} --module-path spacetimedb --server maincloud -y`);
 log.ok('Module published to maincloud');
-log.info('Dashboard: https://spacetimedb.com/databases/color-block-bd7pc');
+log.info(`Dashboard: https://spacetimedb.com/databases/${dbName}`);
 
 // ── 5. Generate TypeScript client bindings ─────────────────────────────────
 log.step('Generating TypeScript client bindings...');

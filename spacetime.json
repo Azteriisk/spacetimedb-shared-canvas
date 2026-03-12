@@ -3,6 +3,6 @@
     "run": "bun run dev"
   },
   "module-path": "./spacetimedb",
-  "database": "color-block-bd7pc",
+  "database": "REPLACE_WITH_YOUR_DB_NAME",
   "server": "maincloud"
 }

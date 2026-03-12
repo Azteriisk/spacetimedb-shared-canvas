@@ -2,8 +2,6 @@
 
 A real-time collaborative pixel canvas powered by [SpacetimeDB](https://spacetimedb.com). Draw on a shared infinite grid with anyone in the world — changes sync instantly across all connected clients.
 
-
-
 ## Features
 
 - **Real-time collaboration** — every paint stroke syncs to all connected clients instantly via SpacetimeDB
@@ -26,56 +24,53 @@ A real-time collaborative pixel canvas powered by [SpacetimeDB](https://spacetim
 | Auth | [Clerk](https://clerk.com) |
 | Realtime | SpacetimeDB WebSocket subscriptions |
 
-## Project Structure
-
-```
-shared-canvas/
-├── src/                    # Frontend (React + TanStack Router)
-│   ├── routes/
-│   │   ├── __root.tsx      # App shell + Clerk provider
-│   │   └── index.tsx       # Main canvas component
-│   ├── module_bindings/    # Auto-generated SpacetimeDB client types
-│   └── router.tsx          # SpacetimeDB connection + TanStack Router setup
-└── spacetimedb/            # SpacetimeDB backend module
-    └── src/
-        └── index.ts        # Tables, reducers, and lifecycle hooks
-```
-
 ## Getting Started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (package manager)
-- [SpacetimeDB CLI](https://spacetimedb.com/docs/getting-started)
-- A [Clerk](https://clerk.com) account (for auth)
+1.  **Bun**: The fast JavaScript runtime. [Install Bun](https://bun.sh).
+2.  **SpacetimeDB CLI**: Required for publishing the backend. [Install SpacetimeDB](https://spacetimedb.com/docs/getting-started).
+3.  **Accounts**:
+    *   [SpacetimeDB Account](https://spacetimedb.com) (Login via CLI: `spacetime login`).
+    *   [Clerk Account](https://clerk.com) (For user authentication).
 
-### Quick Start
+### Setup
 
-**1. Clone and run first-time setup** (installs deps, publishes the module to maincloud, generates bindings):
-
+**1. Clone the repository:**
 ```bash
 git clone <repo-url>
 cd shared-canvas
-bun scripts/setup.js
 ```
 
-> The script will create a `.env.local` template if one doesn't exist.  
-> 1. Fill in your Clerk publishable key from [dashboard.clerk.com](https://dashboard.clerk.com).
-> 2. To use the **Admin capabilities** (Wipe Canvas, Snapshots):
->    - The setup script created `spacetimedb/src/admin.ts` for you.
->    - Add your **Clerk User ID** to the `ADMIN_CLERK_ID` constant in that file.
->    - Add the same User ID to your `.env.local` as `VITE_ADMIN_CLERK_ID`.
-> 3. Update the `DB_NAME` in `src/router.tsx` to match your published database name.
-> 
-> Once configured, run the setup script again.
+**2. Initialize environment:**
+```bash
+bun scripts/setup.js
+```
+The setup script will create a `.env.local` file. You **must** edit this file and provide your own keys:
 
-**2. Start the dev server:**
+*   `VITE_SPACETIMEDB_DB_NAME`: The name you want for your database.
+*   `VITE_CLERK_PUBLISHABLE_KEY`: Found in your [Clerk Dashboard](https://dashboard.clerk.com).
+*   `CLERK_SECRET_KEY`: Found in your [Clerk Dashboard](https://dashboard.clerk.com).
+*   `VITE_ADMIN_CLERK_ID`: Your Clerk User ID (found in the "Users" section of Clerk Dashboard) if you want to use Admin features.
 
+**3. Configure Admin Access (Optional):**
+To use the Admin panel (Snapshots/Wipe), edit `spacetimedb/src/admin.ts` and set your `ADMIN_CLERK_ID` to match your Clerk User ID.
+
+**4. Finalize Setup:**
+Run the setup script again once your keys are set:
+```bash
+bun scripts/setup.js
+```
+This will publish your module to SpacetimeDB and generate the necessary client-side bindings.
+
+### Local Development
+
+Start the development server:
 ```bash
 bun run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — press `Ctrl+C` to stop.
+Open [http://localhost:5173](http://localhost:5173) to start drawing!
 
 ## Controls
 
@@ -86,7 +81,7 @@ Open [http://localhost:5173](http://localhost:5173) — press `Ctrl+C` to stop.
 | Zoom | Scroll wheel |
 | Select color | Keys `1`–`9`, `0` |
 | Toggle dark mode | 🌙 button in toolbar |
-| Admin panel | ⚙️ Admin button (signed in only) |
+| Admin panel | ⚙️ Admin button (signed in as Admin only) |
 
 ## Development Commands
 
@@ -95,7 +90,7 @@ bun run dev                   # Start dev server
 bun run build                 # Production build
 bun run spacetime:publish     # Republish module to maincloud
 bun run spacetime:generate    # Regenerate client bindings
-spacetime logs color-block-bd7pc  # View logs
+spacetime logs <your-db-name> # View backend logs
 ```
 
 ## License
