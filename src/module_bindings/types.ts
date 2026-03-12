@@ -10,6 +10,18 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const CanvasStats = __t.object("CanvasStats", {
+  id: __t.u32(),
+  onlineCount: __t.u32(),
+  totalContributors: __t.u32(),
+});
+export type CanvasStats = __Infer<typeof CanvasStats>;
+
+export const Contributor = __t.object("Contributor", {
+  clerkId: __t.string(),
+});
+export type Contributor = __Infer<typeof Contributor>;
+
 export const Snapshot = __t.object("Snapshot", {
   id: __t.u64(),
   name: __t.string(),

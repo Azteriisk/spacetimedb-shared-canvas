@@ -38,19 +38,40 @@ const spacetimedb = schema({
       clerk_id: t.string(),
     }
   ),
+  canvas_stats: table(
+    { name: 'canvas_stats', public: true },
+    {
+      id: t.u32().primaryKey(),
+      online_count: t.u32(),
+      total_contributors: t.u32(),
+    }
+  ),
+  contributor: table(
+    { name: 'contributor', public: false },
+    {
+      clerk_id: t.string().primaryKey(),
+    }
+  ),
 });
 export default spacetimedb;
 
-export const init = spacetimedb.init(_ctx => {
-  // Called when the module is initially published
+export const init = spacetimedb.init(ctx => {
+  ctx.db.canvas_stats.insert({ id: 0, online_count: 0, total_contributors: 0 });
 });
 
-export const onConnect = spacetimedb.clientConnected(_ctx => {
-  // Called every time a new client connects
+export const onConnect = spacetimedb.clientConnected(ctx => {
+  const stats = ctx.db.canvas_stats.id.find(0);
+  if (stats) {
+    ctx.db.canvas_stats.id.update({ ...stats, online_count: stats.online_count + 1 });
+  }
 });
 
-export const onDisconnect = spacetimedb.clientDisconnected(_ctx => {
-  // Called every time a client disconnects
+export const onDisconnect = spacetimedb.clientDisconnected(ctx => {
+  const stats = ctx.db.canvas_stats.id.find(0);
+  if (stats) {
+    const newCount = stats.online_count > 0 ? stats.online_count - 1 : 0;
+    ctx.db.canvas_stats.id.update({ ...stats, online_count: newCount });
+  }
 });
 
 export const setTileColor = spacetimedb.reducer(
@@ -70,6 +91,16 @@ export const setTileColor = spacetimedb.reducer(
 
     if (color !== 0) {
       ctx.db.tile.insert({ coords, x, y, color, owner_identity, clerk_id });
+      
+      // Track unique contributors
+      const contributorId = clerk_id || owner_identity;
+      if (contributorId && !ctx.db.contributor.clerk_id.find(contributorId)) {
+        ctx.db.contributor.insert({ clerk_id: contributorId });
+        const stats = ctx.db.canvas_stats.id.find(0);
+        if (stats) {
+          ctx.db.canvas_stats.id.update({ ...stats, total_contributors: stats.total_contributors + 1 });
+        }
+      }
     }
   }
 );
@@ -149,6 +180,16 @@ export const loadSnapshot = spacetimedb.reducer(
           owner_identity: st.owner_identity,
           clerk_id: st.clerk_id,
         });
+
+        // Ensure contributors from loaded snapshots are also tracked
+        const contributorId = st.clerk_id || st.owner_identity;
+        if (contributorId && !ctx.db.contributor.clerk_id.find(contributorId)) {
+          ctx.db.contributor.insert({ clerk_id: contributorId });
+          const stats = ctx.db.canvas_stats.id.find(0);
+          if (stats) {
+            ctx.db.canvas_stats.id.update({ ...stats, total_contributors: stats.total_contributors + 1 });
+          }
+        }
       }
     }
   }

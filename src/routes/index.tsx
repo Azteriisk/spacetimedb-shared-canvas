@@ -52,6 +52,9 @@ function App() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
+  const [statsRows] = useSpacetimeDBQuery(tables.canvas_stats);
+  const stats = statsRows?.[0] || { onlineCount: 0, totalContributors: 0 };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -275,13 +278,17 @@ function App() {
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
         <div style={{
-          width: 12, height: 12, borderRadius: '50%',
-          background: connected ? '#22C55E' : '#EF4444',
-          boxShadow: connected ? '0 0 12px rgba(34,197,94,0.6)' : '0 0 12px rgba(239,68,68,0.6)'
+          width: 8, height: 8, borderRadius: '50%',
+          background: connected ? '#10B981' : '#EF4444',
+          boxShadow: connected ? '0 0 12px #10B981' : '0 0 12px #EF4444',
         }} />
-        <span style={{ fontWeight: 600, color: negativeMode ? '#F9FAFB' : '#111827', fontSize: '14px', letterSpacing: '0.02em' }}>
-          {connected ? 'SpaceTimeDB Connected' : 'Connecting...'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: negativeMode ? '#E5E7EB' : '#374151' }}>
+          <span style={{ color: '#10B981' }}>{stats.onlineCount}</span>
+          <span style={{ color: negativeMode ? '#9CA3AF' : '#6B7280', fontSize: 11, fontWeight: 500 }}>Online</span>
+          <div style={{ width: 1, height: 12, background: negativeMode ? '#4B5563' : '#E5E7EB', margin: '0 4px' }} />
+          <span style={{ color: '#3B82F6' }}>{stats.totalContributors}</span>
+          <span style={{ color: negativeMode ? '#9CA3AF' : '#6B7280', fontSize: 11, fontWeight: 500 }}>People</span>
+        </div>
       </div>
 
       {/* Top Left: Admin Panel — only visible to the admin */}

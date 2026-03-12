@@ -44,6 +44,7 @@ import WipeCanvasReducer from "./wipe_canvas_reducer";
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import CanvasStatsRow from "./canvas_stats_table";
 import SnapshotRow from "./snapshot_table";
 import SnapshotTileRow from "./snapshot_tile_table";
 import TileRow from "./tile_table";
@@ -52,6 +53,17 @@ import TileRow from "./tile_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  canvas_stats: __table({
+    name: 'canvas_stats',
+    indexes: [
+      { name: 'id', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'canvas_stats_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, CanvasStatsRow),
   snapshot: __table({
     name: 'snapshot',
     indexes: [
