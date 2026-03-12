@@ -641,7 +641,7 @@ function App() {
 
         {/* GitHub Link */}
         <a
-          href="https://github.com/clockworklabs/SpacetimeDB"
+          href="https://github.com/Azteriisk/spacetimedb-shared-canvas"
           target="_blank"
           rel="noreferrer"
           style={{
