@@ -59,12 +59,37 @@ function App() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const checkMobile = () => {
+      const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
+      const touch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+      setIsMobile(narrow || touch);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const isAdmin = user?.id && import.meta.env.VITE_ADMIN_CLERK_ID && user.id === import.meta.env.VITE_ADMIN_CLERK_ID;
 
   const isPanning = useRef(false);
   const isDrawing = useRef(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const lastDrawnTile = useRef({ x: Number.MAX_SAFE_INTEGER, y: Number.MAX_SAFE_INTEGER });
+
+  // Multi-touch: track active pointers for pinch-zoom and two-finger pan
+  const activePointers = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
+  const lastPinchState = useRef<{
+    centerX: number;
+    centerY: number;
+    distance: number;
+    zoom: number;
+    cameraX: number;
+    cameraY: number;
+  } | null>(null);
+  const wasTwoFingerGesture = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -195,34 +220,109 @@ function App() {
     scheduleDraw();
   }, [tiles, camera, clickedColorIndex, negativeMode]);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    // Disable text selection during drag
-    e.currentTarget.setPointerCapture(e.pointerId);
+  const getTwoFingerState = () => {
+    const entries = [...activePointers.current.entries()];
+    if (entries.length < 2) return null;
+    const [id1, p1] = entries[0];
+    const [id2, p2] = entries[1];
+    const centerX = (p1.clientX + p2.clientX) / 2;
+    const centerY = (p1.clientY + p2.clientY) / 2;
+    const distance = Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY) || 1;
+    return { centerX, centerY, distance };
+  };
 
-    // Right (2) or Middle (1) click for panning
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    activePointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    const count = activePointers.current.size;
+    if (count >= 2) {
+      wasTwoFingerGesture.current = true;
+      const two = getTwoFingerState();
+      if (two) {
+        lastPinchState.current = {
+          centerX: two.centerX,
+          centerY: two.centerY,
+          distance: two.distance,
+          zoom: camera.zoom,
+          cameraX: camera.x,
+          cameraY: camera.y,
+        };
+      }
+      isDrawing.current = false;
+      isPanning.current = false;
+      return;
+    }
+
+    if (count === 1) {
+      wasTwoFingerGesture.current = false;
+    }
+
+    // Desktop: Right (2) or Middle (1) click for panning
     if (e.button === 1 || e.button === 2) {
       isPanning.current = true;
       lastMousePos.current = { x: e.clientX, y: e.clientY };
-    } else if (e.button === 0) {
-      // Left click to draw
+    } else if (e.button === 0 && !wasTwoFingerGesture.current) {
       isDrawing.current = true;
       paintTile(e.clientX, e.clientY);
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    activePointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    const count = activePointers.current.size;
+    if (count >= 2) {
+      const two = getTwoFingerState();
+      const prev = lastPinchState.current;
+      if (two && prev) {
+        setCamera((c) => {
+          const scale = two.distance / prev.distance;
+          const newZoom = Math.min(5, Math.max(0.1, prev.zoom * scale));
+          const wx = (prev.centerX - prev.cameraX) / prev.zoom;
+          const wy = (prev.centerY - prev.cameraY) / prev.zoom;
+          const newX = two.centerX - wx * newZoom;
+          const newY = two.centerY - wy * newZoom;
+          lastPinchState.current = {
+            centerX: two.centerX,
+            centerY: two.centerY,
+            distance: two.distance,
+            zoom: newZoom,
+            cameraX: newX,
+            cameraY: newY,
+          };
+          return { x: newX, y: newY, zoom: newZoom };
+        });
+      }
+      isDrawing.current = false;
+      return;
+    }
+
     if (isPanning.current) {
       const dx = e.clientX - lastMousePos.current.x;
       const dy = e.clientY - lastMousePos.current.y;
-      setCamera(c => ({ ...c, x: c.x + dx, y: c.y + dy }));
+      setCamera((c) => ({ ...c, x: c.x + dx, y: c.y + dy }));
       lastMousePos.current = { x: e.clientX, y: e.clientY };
-    } else if (isDrawing.current) {
+    } else if (isDrawing.current && !wasTwoFingerGesture.current) {
       paintTile(e.clientX, e.clientY);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     e.currentTarget.releasePointerCapture(e.pointerId);
+    activePointers.current.delete(e.pointerId);
+
+    const count = activePointers.current.size;
+    if (count === 1) {
+      wasTwoFingerGesture.current = true;
+    }
+    if (count === 0) {
+      wasTwoFingerGesture.current = false;
+      lastPinchState.current = null;
+    }
+
+    if (count >= 2) return;
+
     isPanning.current = false;
     isDrawing.current = false;
     lastDrawnTile.current = { x: Number.MAX_SAFE_INTEGER, y: Number.MAX_SAFE_INTEGER };
@@ -258,6 +358,28 @@ function App() {
         y: e.clientY - wy * newZoom,
         zoom: newZoom
       };
+    });
+  };
+
+  const zoomStep = 0.25;
+  const zoomIn = () => {
+    const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
+    const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
+    setCamera(c => {
+      const newZoom = Math.min(5, c.zoom + zoomStep);
+      const wx = (centerX - c.x) / c.zoom;
+      const wy = (centerY - c.y) / c.zoom;
+      return { x: centerX - wx * newZoom, y: centerY - wy * newZoom, zoom: newZoom };
+    });
+  };
+  const zoomOut = () => {
+    const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
+    const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
+    setCamera(c => {
+      const newZoom = Math.max(0.1, c.zoom - zoomStep);
+      const wx = (centerX - c.x) / c.zoom;
+      const wy = (centerY - c.y) / c.zoom;
+      return { x: centerX - wx * newZoom, y: centerY - wy * newZoom, zoom: newZoom };
     });
   };
 
@@ -517,13 +639,72 @@ function App() {
         </Show>
       </div>
 
+      {/* Mobile: Color picker bottom sheet */}
+      {isMobile && showColorPicker && (
+        <>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Close color picker"
+            onClick={() => setShowColorPicker(false)}
+            onKeyDown={e => e.key === 'Escape' && setShowColorPicker(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.4)',
+              touchAction: 'none',
+            }}
+          />
+          <div style={{
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50,
+            background: negativeMode ? 'rgba(17, 24, 39, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(16px)',
+            borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            border: negativeMode ? '1px solid rgba(55, 65, 81, 0.6)' : '1px solid rgba(229, 231, 235, 0.6)',
+            boxShadow: '0 -10px 40px rgba(0,0,0,0.2)',
+            padding: '24px 20px max(24px, env(safe-area-inset-bottom))',
+            fontFamily: 'Inter, system-ui, sans-serif',
+          }}>
+            <div style={{ color: negativeMode ? '#9CA3AF' : '#6B7280', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 16 }}>Choose color</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((i) => {
+                const c = COLORS[i];
+                const isActive = activeColorIndex === i;
+                let displayColor = c;
+                if (negativeMode) {
+                  if (i === 0) displayColor = '#1e293b';
+                  if (i === 1) displayColor = '#FFFFFF';
+                }
+                const isDarkBackground = displayColor === '#000000' || displayColor === '#1e293b' || displayColor === '#111827' || (!negativeMode && i === 1) || i === 4 || i === 9;
+                const textColor = isDarkBackground ? '#FFFFFF' : '#111827';
+                const borderStyle = displayColor === '#FFFFFF' || displayColor === '#000000' || displayColor === '#1e293b' || displayColor === '#111827' ? '1px solid #D1D5DB' : 'none';
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { setClickedColorIndex(i); setShowColorPicker(false); }}
+                    style={{
+                      minHeight: 56, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 16, fontWeight: 'bold', cursor: 'pointer',
+                      backgroundColor: displayColor, color: textColor, border: borderStyle,
+                      boxShadow: isActive ? '0 0 0 4px rgba(59, 130, 246, 0.6)' : '0 2px 6px rgba(0,0,0,0.1)',
+                    }}
+                    title={`Color ${i}`}
+                  >
+                    {i}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Bottom Center: Floating Toolbar */}
       <div style={{
         position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 30, pointerEvents: 'auto',
-        display: 'flex', alignItems: 'center', gap: 16,
+        display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 16,
+        maxWidth: 'calc(100vw - 32px)', overflow: 'hidden',
         background: negativeMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(16px)',
-        padding: '16px 24px', borderRadius: 32, border: negativeMode ? '1px solid rgba(55, 65, 81, 0.5)' : '1px solid rgba(229, 231, 235, 0.5)',
+        padding: isMobile ? '12px 16px' : '16px 24px', borderRadius: 32, border: negativeMode ? '1px solid rgba(55, 65, 81, 0.5)' : '1px solid rgba(229, 231, 235, 0.5)',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
@@ -534,54 +715,74 @@ function App() {
           style={{
             width: 48, height: 48, borderRadius: 16, background: negativeMode ? '#374151' : '#F3F4F6', color: negativeMode ? '#F9FAFB' : '#111827',
             border: negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+            fontSize: 24, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+            flexShrink: 0,
           }}
           title="Toggle Dark Mode"
         >
           {negativeMode ? '☀️' : '🌙'}
         </button>
 
-        <div style={{ width: 1, height: 40, background: negativeMode ? '#4B5563' : '#E5E7EB', margin: '0 4px' }} /> {/* Divider */}
+        <div style={{ width: 1, height: 40, background: negativeMode ? '#4B5563' : '#E5E7EB', margin: '0 4px', flexShrink: 0 }} /> {/* Divider */}
 
-        {/* Colors */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((i) => {
-            const c = COLORS[i];
-            const isActive = activeColorIndex === i;
-            // In dark mode: 0 (White) maps to very dark grey (#1e293b) to match background, 1 (Black) maps to pure White (#FFFFFF).
-            let displayColor = c;
-            if (negativeMode) {
-              if (i === 0) displayColor = '#1e293b';
-              if (i === 1) displayColor = '#FFFFFF';
-            }
-            
-            // Let's make text visible depending on the resulting display color
-            const isDarkBackground = displayColor === '#000000' || displayColor === '#1e293b' || displayColor === '#111827' || (!negativeMode && i === 1) || i === 4 || i === 9; // Roughly dark colors
-            const textColor = isDarkBackground ? '#FFFFFF' : '#111827';
-            
-            const borderStyle = displayColor === '#FFFFFF' || displayColor === '#000000' || displayColor === '#1e293b' || displayColor === '#111827' ? '1px solid #D1D5DB' : 'none';
+        {/* Colors: desktop strip, mobile single button that opens sheet */}
+        {isMobile ? (
+          <button
+            onClick={() => setShowColorPicker(true)}
+            style={{
+              minWidth: 56, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              fontSize: 14, fontWeight: 'bold', cursor: 'pointer',
+              backgroundColor: (() => {
+                const c = COLORS[activeColorIndex];
+                let d = c;
+                if (negativeMode) { if (activeColorIndex === 0) d = '#1e293b'; if (activeColorIndex === 1) d = '#FFFFFF'; }
+                return d;
+              })(),
+              color: [1, 4, 9].includes(activeColorIndex) || (negativeMode && activeColorIndex === 1) ? '#FFFFFF' : '#111827',
+              border: [0, 1].includes(activeColorIndex) ? '1px solid #D1D5DB' : 'none',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+            }}
+            title="Choose color"
+          >
+            <span>Color</span>
+            <span>{activeColorIndex}</span>
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((i) => {
+              const c = COLORS[i];
+              const isActive = activeColorIndex === i;
+              let displayColor = c;
+              if (negativeMode) {
+                if (i === 0) displayColor = '#1e293b';
+                if (i === 1) displayColor = '#FFFFFF';
+              }
+              const isDarkBackground = displayColor === '#000000' || displayColor === '#1e293b' || displayColor === '#111827' || (!negativeMode && i === 1) || i === 4 || i === 9;
+              const textColor = isDarkBackground ? '#FFFFFF' : '#111827';
+              const borderStyle = displayColor === '#FFFFFF' || displayColor === '#000000' || displayColor === '#1e293b' || displayColor === '#111827' ? '1px solid #D1D5DB' : 'none';
 
-            return (
-              <button
-                key={i}
-                onClick={() => setClickedColorIndex(i)}
-                style={{
-                  width: 48, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s ease-out',
-                  backgroundColor: displayColor, color: textColor,
-                  border: borderStyle,
-                  boxShadow: isActive ? '0 0 0 4px rgba(59, 130, 246, 0.5), 0 4px 6px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.1)',
-                  transform: isActive ? 'scale(1.15) translateY(-2px)' : 'scale(1)'
-                }}
-                title={`Color ${i}`}
-              >
-                {i}
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={i}
+                  onClick={() => setClickedColorIndex(i)}
+                  style={{
+                    width: 48, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.15s ease-out',
+                    backgroundColor: displayColor, color: textColor,
+                    border: borderStyle,
+                    boxShadow: isActive ? '0 0 0 4px rgba(59, 130, 246, 0.5), 0 4px 6px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.1)',
+                    transform: isActive ? 'scale(1.15) translateY(-2px)' : 'scale(1)'
+                  }}
+                  title={`Color ${i}`}
+                >
+                  {i}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        <div style={{ width: 1, height: 40, background: negativeMode ? '#4B5563' : '#E5E7EB', margin: '0 4px' }} /> {/* Divider */}
+        <div style={{ width: 1, height: 40, background: negativeMode ? '#4B5563' : '#E5E7EB', margin: '0 4px', flexShrink: 0 }} /> {/* Divider */}
 
         {/* Controls Help */}
         <div style={{ position: 'relative' }}>
@@ -602,13 +803,21 @@ function App() {
                 <span>📖</span> How to Play
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  { icon: '🖱️', label: 'Left Click', detail: 'Paint a tile' },
-                  { icon: '🖌️', label: 'Drag', detail: 'Continuous painting' },
-                  { icon: '✋', label: 'Right/Mid Click', detail: 'Pan the canvas' },
-                  { icon: '🔍', label: 'Scroll', detail: 'Zoom in/out' },
-                  { icon: '⌨️', label: '0-9 Keys', detail: 'Switch colors' },
-                ].map((item, i) => (
+                {(isMobile
+                  ? [
+                      { icon: '👆', label: 'One finger', detail: 'Paint tiles' },
+                      { icon: '✌️', label: 'Two fingers', detail: 'Pan & pinch to zoom' },
+                      { icon: '➕', label: '+ / − buttons', detail: 'Zoom in/out' },
+                      { icon: '🎨', label: 'Color button', detail: 'Open color picker' },
+                    ]
+                  : [
+                      { icon: '🖱️', label: 'Left Click', detail: 'Paint a tile' },
+                      { icon: '🖌️', label: 'Drag', detail: 'Continuous painting' },
+                      { icon: '✋', label: 'Right/Mid Click', detail: 'Pan the canvas' },
+                      { icon: '🔍', label: 'Scroll', detail: 'Zoom in/out' },
+                      { icon: '⌨️', label: '0-9 Keys', detail: 'Switch colors' },
+                    ]
+                ).map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 16, width: 24, textAlign: 'center' }}>{item.icon}</span>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -655,6 +864,44 @@ function App() {
         </a>
 
       </div>
+
+      {/* Mobile: floating zoom controls */}
+      {isMobile && (
+        <div style={{
+          position: 'absolute', bottom: 100, right: 20, zIndex: 30, pointerEvents: 'auto',
+          display: 'flex', flexDirection: 'column', gap: 8,
+          background: negativeMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(12px)',
+          padding: 8, borderRadius: 16,
+          border: negativeMode ? '1px solid rgba(55, 65, 81, 0.5)' : '1px solid rgba(229, 231, 235, 0.5)',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+        }}>
+          <button
+            onClick={zoomIn}
+            aria-label="Zoom in"
+            style={{
+              width: 48, height: 48, borderRadius: 12,
+              background: negativeMode ? '#374151' : '#F3F4F6',
+              border: negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB',
+              color: negativeMode ? '#F9FAFB' : '#111827',
+              fontSize: 24, fontWeight: 'bold', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >+</button>
+          <button
+            onClick={zoomOut}
+            aria-label="Zoom out"
+            style={{
+              width: 48, height: 48, borderRadius: 12,
+              background: negativeMode ? '#374151' : '#F3F4F6',
+              border: negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB',
+              color: negativeMode ? '#F9FAFB' : '#111827',
+              fontSize: 24, fontWeight: 'bold', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >−</button>
+        </div>
+      )}
 
       <canvas
         ref={canvasRef}
