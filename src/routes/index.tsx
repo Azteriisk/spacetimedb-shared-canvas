@@ -61,9 +61,7 @@ function App() {
 
   useEffect(() => {
     const checkMobile = () => {
-      const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
-      const touch = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-      setIsMobile(narrow || touch);
+      setIsMobile(typeof window !== 'undefined' && window.innerWidth < 768);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
