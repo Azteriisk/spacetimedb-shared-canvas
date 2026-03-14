@@ -882,7 +882,6 @@ function App() {
                       { icon: '✋', label: 'Move mode', detail: 'One finger pans the canvas' },
                       { icon: '🖌️', label: 'Draw mode', detail: 'One finger paints tiles' },
                       { icon: '✌️', label: 'Two fingers', detail: 'Pan & pinch to zoom' },
-                      { icon: '➕', label: '+ / − buttons', detail: 'Zoom in/out' },
                       { icon: '🎨', label: 'Color button', detail: 'Open color picker' },
                     ]
                   : [
@@ -939,48 +938,6 @@ function App() {
         </a>
 
       </div>
-
-      {/* Mobile: floating zoom controls */}
-      {isMobile && (
-        <div style={{
-          position: 'absolute',
-          bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
-          right: 20,
-          zIndex: 30,
-          pointerEvents: 'auto',
-          display: 'flex', flexDirection: 'column', gap: 8,
-          background: negativeMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(12px)',
-          padding: 8, borderRadius: 16,
-          border: negativeMode ? '1px solid rgba(55, 65, 81, 0.5)' : '1px solid rgba(229, 231, 235, 0.5)',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-        }}>
-          <button
-            onClick={zoomIn}
-            aria-label="Zoom in"
-            style={{
-              width: 48, height: 48, borderRadius: 12,
-              background: negativeMode ? '#374151' : '#F3F4F6',
-              border: negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB',
-              color: negativeMode ? '#F9FAFB' : '#111827',
-              fontSize: 24, fontWeight: 'bold', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >+</button>
-          <button
-            onClick={zoomOut}
-            aria-label="Zoom out"
-            style={{
-              width: 48, height: 48, borderRadius: 12,
-              background: negativeMode ? '#374151' : '#F3F4F6',
-              border: negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB',
-              color: negativeMode ? '#F9FAFB' : '#111827',
-              fontSize: 24, fontWeight: 'bold', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >−</button>
-        </div>
-      )}
 
       <canvas
         ref={canvasRef}
