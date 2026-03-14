@@ -341,8 +341,15 @@ function App() {
   const paintTile = (clientX: number, clientY: number) => {
     if (!connected) return;
 
-    const tx = Math.floor((clientX - camera.x) / (TILE_SIZE * camera.zoom));
-    const ty = Math.floor((clientY - camera.y) / (TILE_SIZE * camera.zoom));
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+
+    const tx = Math.floor((localX - camera.x) / (TILE_SIZE * camera.zoom));
+    const ty = Math.floor((localY - camera.y) / (TILE_SIZE * camera.zoom));
 
     if (lastDrawnTile.current.x === tx && lastDrawnTile.current.y === ty) {
       return;
@@ -395,7 +402,7 @@ function App() {
 
   return (
     <div style={{
-      width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative',
+      width: '100vw', height: '100dvh', overflow: 'hidden', position: 'relative',
       background: negativeMode ? '#111827' : '#e5e7eb'
     }}>
 
@@ -709,7 +716,12 @@ function App() {
 
       {/* Bottom Center: Floating Toolbar */}
       <div style={{
-        position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 30, pointerEvents: 'auto',
+        position: 'absolute',
+        bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 30,
+        pointerEvents: 'auto',
         display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 16,
         maxWidth: 'calc(100vw - 32px)', overflow: 'hidden',
         background: negativeMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
@@ -746,35 +758,40 @@ function App() {
                 backgroundColor: (() => {
                   const base = COLORS[activeColorIndex];
                   if (!negativeMode) return base;
-                  if (activeColorIndex === 0) return '#1e293b';
+                  // Dark mode: 0 should look like other chrome buttons, 1 should stay white.
+                  if (activeColorIndex === 0) return '#374151';
                   if (activeColorIndex === 1) return '#FFFFFF';
                   return base;
                 })(),
                 color: (() => {
-                  const base = COLORS[activeColorIndex];
-                  let display = base;
-                  if (negativeMode) {
-                    if (activeColorIndex === 0) display = '#1e293b';
-                    if (activeColorIndex === 1) display = '#FFFFFF';
+                  if (!negativeMode) {
+                    // Light mode: keep existing behavior – darker colors get white text.
+                    return [1, 4, 9].includes(activeColorIndex) ? '#FFFFFF' : '#111827';
                   }
-                  const isDark =
-                    display === '#000000' ||
-                    display === '#1e293b' ||
-                    display === '#111827' ||
-                    display === '#3B82F6' ||
-                    display === '#8B5CF6';
-                  return isDark ? '#FFFFFF' : '#111827';
+                  // Dark mode:
+                  if (activeColorIndex === 0) {
+                    // Match the question mark button text color.
+                    return '#D1D5DB';
+                  }
+                  if (activeColorIndex === 1) {
+                    // White tile with dark text so the "1" is visible.
+                    return '#111827';
+                  }
+                  // Other colors already look correct: use white text on strong colors.
+                  return [4, 9].includes(activeColorIndex) ? '#FFFFFF' : '#F9FAFB';
                 })(),
                 border: (() => {
-                  const base = COLORS[activeColorIndex];
-                  let display = base;
-                  if (negativeMode) {
-                    if (activeColorIndex === 0) display = '#1e293b';
-                    if (activeColorIndex === 1) display = '#FFFFFF';
+                  if (!negativeMode && [0, 1].includes(activeColorIndex)) {
+                    return '1px solid #D1D5DB';
                   }
-                  return (display === '#FFFFFF' || display === '#000000' || display === '#1e293b' || display === '#111827')
-                    ? '1px solid #D1D5DB'
-                    : 'none';
+                  if (negativeMode && activeColorIndex === 0) {
+                    // Match other chrome buttons.
+                    return '1px solid #4B5563';
+                  }
+                  if (negativeMode && activeColorIndex === 1) {
+                    return '1px solid #D1D5DB';
+                  }
+                  return 'none';
                 })(),
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
               }}
@@ -926,7 +943,11 @@ function App() {
       {/* Mobile: floating zoom controls */}
       {isMobile && (
         <div style={{
-          position: 'absolute', bottom: 100, right: 20, zIndex: 30, pointerEvents: 'auto',
+          position: 'absolute',
+          bottom: 'calc(92px + env(safe-area-inset-bottom, 0px))',
+          right: 20,
+          zIndex: 30,
+          pointerEvents: 'auto',
           display: 'flex', flexDirection: 'column', gap: 8,
           background: negativeMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(12px)',
