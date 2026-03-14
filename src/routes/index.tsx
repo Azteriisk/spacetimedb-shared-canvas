@@ -744,13 +744,38 @@ function App() {
                 width: 48, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, fontWeight: 'bold', cursor: 'pointer',
                 backgroundColor: (() => {
-                  const c = COLORS[activeColorIndex];
-                  let d = c;
-                  if (negativeMode) { if (activeColorIndex === 0) d = '#1e293b'; if (activeColorIndex === 1) d = '#FFFFFF'; }
-                  return d;
+                  const base = COLORS[activeColorIndex];
+                  if (!negativeMode) return base;
+                  if (activeColorIndex === 0) return '#1e293b';
+                  if (activeColorIndex === 1) return '#FFFFFF';
+                  return base;
                 })(),
-                color: [1, 4, 9].includes(activeColorIndex) || (negativeMode && activeColorIndex === 1) ? '#FFFFFF' : '#111827',
-                border: [0, 1].includes(activeColorIndex) ? '1px solid #D1D5DB' : 'none',
+                color: (() => {
+                  const base = COLORS[activeColorIndex];
+                  let display = base;
+                  if (negativeMode) {
+                    if (activeColorIndex === 0) display = '#1e293b';
+                    if (activeColorIndex === 1) display = '#FFFFFF';
+                  }
+                  const isDark =
+                    display === '#000000' ||
+                    display === '#1e293b' ||
+                    display === '#111827' ||
+                    display === '#3B82F6' ||
+                    display === '#8B5CF6';
+                  return isDark ? '#FFFFFF' : '#111827';
+                })(),
+                border: (() => {
+                  const base = COLORS[activeColorIndex];
+                  let display = base;
+                  if (negativeMode) {
+                    if (activeColorIndex === 0) display = '#1e293b';
+                    if (activeColorIndex === 1) display = '#FFFFFF';
+                  }
+                  return (display === '#FFFFFF' || display === '#000000' || display === '#1e293b' || display === '#111827')
+                    ? '1px solid #D1D5DB'
+                    : 'none';
+                })(),
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
               }}
               title="Choose color"
