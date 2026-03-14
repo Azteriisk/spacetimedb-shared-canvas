@@ -88,6 +88,7 @@ function App() {
   const wasTwoFingerGesture = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [mode, setMode] = useState<'move' | 'draw'>('move');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -256,11 +257,22 @@ function App() {
       wasTwoFingerGesture.current = false;
     }
 
+    // Mobile: one-finger drag pans in move mode
+    if (isMobile && e.pointerType === 'touch' && mode === 'move') {
+      isPanning.current = true;
+      lastMousePos.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+
     // Desktop: Right (2) or Middle (1) click for panning
     if (e.button === 1 || e.button === 2) {
       isPanning.current = true;
       lastMousePos.current = { x: e.clientX, y: e.clientY };
-    } else if (e.button === 0 && !wasTwoFingerGesture.current) {
+    } else if (
+      e.button === 0 &&
+      !wasTwoFingerGesture.current &&
+      (!isMobile || mode === 'draw')
+    ) {
       isDrawing.current = true;
       paintTile(e.clientX, e.clientY);
     }
@@ -723,28 +735,49 @@ function App() {
 
         <div style={{ width: 1, height: 40, background: negativeMode ? '#4B5563' : '#E5E7EB', margin: '0 4px', flexShrink: 0 }} /> {/* Divider */}
 
-        {/* Colors: desktop strip, mobile single button that opens sheet */}
+        {/* Colors: desktop strip, mobile color + mode buttons */}
         {isMobile ? (
-          <button
-            onClick={() => setShowColorPicker(true)}
-            style={{
-              minWidth: 56, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              fontSize: 14, fontWeight: 'bold', cursor: 'pointer',
-              backgroundColor: (() => {
-                const c = COLORS[activeColorIndex];
-                let d = c;
-                if (negativeMode) { if (activeColorIndex === 0) d = '#1e293b'; if (activeColorIndex === 1) d = '#FFFFFF'; }
-                return d;
-              })(),
-              color: [1, 4, 9].includes(activeColorIndex) || (negativeMode && activeColorIndex === 1) ? '#FFFFFF' : '#111827',
-              border: [0, 1].includes(activeColorIndex) ? '1px solid #D1D5DB' : 'none',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-            }}
-            title="Choose color"
-          >
-            <span>Color</span>
-            <span>{activeColorIndex}</span>
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setShowColorPicker(true)}
+              style={{
+                width: 48, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 16, fontWeight: 'bold', cursor: 'pointer',
+                backgroundColor: (() => {
+                  const c = COLORS[activeColorIndex];
+                  let d = c;
+                  if (negativeMode) { if (activeColorIndex === 0) d = '#1e293b'; if (activeColorIndex === 1) d = '#FFFFFF'; }
+                  return d;
+                })(),
+                color: [1, 4, 9].includes(activeColorIndex) || (negativeMode && activeColorIndex === 1) ? '#FFFFFF' : '#111827',
+                border: [0, 1].includes(activeColorIndex) ? '1px solid #D1D5DB' : 'none',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+              }}
+              title="Choose color"
+            >
+              <span>{activeColorIndex}</span>
+            </button>
+            <button
+              onClick={() => setMode(m => (m === 'move' ? 'draw' : 'move'))}
+              style={{
+                width: 48, height: 48, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 20, cursor: 'pointer',
+                background: mode === 'move'
+                  ? (negativeMode ? '#374151' : '#F3F4F6')
+                  : '#3B82F6',
+                color: mode === 'move'
+                  ? (negativeMode ? '#E5E7EB' : '#111827')
+                  : '#FFFFFF',
+                border: mode === 'move'
+                  ? (negativeMode ? '1px solid #4B5563' : '1px solid #E5E7EB')
+                  : '1px solid #2563EB',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+              }}
+              title={mode === 'move' ? 'Move canvas (one-finger pan)' : 'Draw mode (one-finger paint)'}
+            >
+              {mode === 'move' ? '✋' : '🖌️'}
+            </button>
+          </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((i) => {
@@ -803,7 +836,9 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {(isMobile
                   ? [
-                      { icon: '👆', label: 'One finger', detail: 'Paint tiles' },
+                      { icon: '👆', label: 'One finger', detail: 'Paint tiles in Draw mode' },
+                      { icon: '✋', label: 'Move mode', detail: 'One finger pans the canvas' },
+                      { icon: '🖌️', label: 'Draw mode', detail: 'One finger paints tiles' },
                       { icon: '✌️', label: 'Two fingers', detail: 'Pan & pinch to zoom' },
                       { icon: '➕', label: '+ / − buttons', detail: 'Zoom in/out' },
                       { icon: '🎨', label: 'Color button', detail: 'Open color picker' },
