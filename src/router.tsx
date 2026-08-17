@@ -1,5 +1,5 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Identity } from 'spacetimedb';
 import { routeTree } from './routeTree.gen';
 import {
@@ -75,9 +75,11 @@ export function getRouter() {
     ),
     context: { queryClient },
     Wrap: ({ children }) => (
-      <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
-        {children}
-      </SpacetimeDBProvider>
+      <QueryClientProvider client={queryClient}>
+        <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
+          {children}
+        </SpacetimeDBProvider>
+      </QueryClientProvider>
     ),
   });
 

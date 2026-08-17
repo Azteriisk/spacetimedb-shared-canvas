@@ -246,8 +246,8 @@ function App() {
   const getTwoFingerState = () => {
     const entries = [...activePointers.current.entries()];
     if (entries.length < 2) return null;
-    const [id1, p1] = entries[0];
-    const [id2, p2] = entries[1];
+    const [, p1] = entries[0];
+    const [, p2] = entries[1];
     const centerX = (p1.clientX + p2.clientX) / 2;
     const centerY = (p1.clientY + p2.clientY) / 2;
     const distance = Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY) || 1;
@@ -403,27 +403,7 @@ function App() {
     });
   };
 
-  const zoomStep = 0.25;
-  const zoomIn = () => {
-    const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
-    const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
-    updateCamera(c => {
-      const newZoom = Math.min(5, c.zoom + zoomStep);
-      const wx = (centerX - c.x) / c.zoom;
-      const wy = (centerY - c.y) / c.zoom;
-      return { x: centerX - wx * newZoom, y: centerY - wy * newZoom, zoom: newZoom };
-    });
-  };
-  const zoomOut = () => {
-    const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
-    const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
-    updateCamera(c => {
-      const newZoom = Math.max(0.1, c.zoom - zoomStep);
-      const wx = (centerX - c.x) / c.zoom;
-      const wy = (centerY - c.y) / c.zoom;
-      return { x: centerX - wx * newZoom, y: centerY - wy * newZoom, zoom: newZoom };
-    });
-  };
+
 
   return (
     <div style={{
