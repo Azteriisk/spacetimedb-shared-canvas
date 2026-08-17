@@ -9,6 +9,7 @@ import {
 } from 'spacetimedb/tanstack';
 
 export const Route = createFileRoute('/')({
+  ssr: false,
   component: App,
 });
 
