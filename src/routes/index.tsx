@@ -44,6 +44,16 @@ function App() {
 
   const [clickedColorIndex, setClickedColorIndex] = useState(1); // default to 1 (black) to allow drawing immediately
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const cameraRef = useRef({ x: 0, y: 0, zoom: 1 });
+
+  const updateCamera = (next: { x: number; y: number; zoom: number } | ((prev: { x: number; y: number; zoom: number }) => { x: number; y: number; zoom: number })) => {
+    setCamera(prev => {
+      const val = typeof next === 'function' ? next(prev) : next;
+      cameraRef.current = val;
+      return val;
+    });
+  };
+
   const [negativeMode, setNegativeMode] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [snapshotName, setSnapshotName] = useState('');
@@ -126,69 +136,81 @@ function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const cam = cameraRef.current;
+    const { x: camX, y: camY, zoom: camZoom } = cam;
+
     // Clear everything with the grid border color
     ctx.fillStyle = negativeMode ? '#374151' : '#E5E7EB';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    ctx.translate(camera.x, camera.y);
-    ctx.scale(camera.zoom, camera.zoom);
+    ctx.translate(camX, camY);
+    ctx.scale(camZoom, camZoom);
 
     // Calculate visible bounds in world coordinates
-    const startX = Math.floor(-camera.x / (TILE_SIZE * camera.zoom));
-    const endX = Math.ceil((canvas.width - camera.x) / (TILE_SIZE * camera.zoom));
-    const startY = Math.floor(-camera.y / (TILE_SIZE * camera.zoom));
-    const endY = Math.ceil((canvas.height - camera.y) / (TILE_SIZE * camera.zoom));
-    // Fast Path: Draw one massive background rectangle for the active area to serve as the default tile color
-    // We only draw individual grid lines by leaving a 1px gap, so filling the background works.
-    ctx.fillStyle = negativeMode ? '#1e293b' : COLORS[0]; // In negative mode, default (0) background is very dark grey.
+    const startX = Math.floor(-camX / (TILE_SIZE * camZoom));
+    const endX = Math.ceil((canvas.width - camX) / (TILE_SIZE * camZoom));
+    const startY = Math.floor(-camY / (TILE_SIZE * camZoom));
+    const endY = Math.ceil((canvas.height - camY) / (TILE_SIZE * camZoom));
 
-    // We'll draw the solid background color first
-    ctx.fillStyle = negativeMode ? '#1e293b' : COLORS[0]; // In negative mode, default (0) background is very dark grey.
-    ctx.fillRect(startX * TILE_SIZE, startY * TILE_SIZE, (endX - startX + 1) * TILE_SIZE, (endY - startY + 1) * TILE_SIZE);
+    // Fill the viewport background with base tile color
+    const baseColor = negativeMode ? '#1e293b' : COLORS[0];
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(
+      startX * TILE_SIZE,
+      startY * TILE_SIZE,
+      (endX - startX + 1) * TILE_SIZE,
+      (endY - startY + 1) * TILE_SIZE
+    );
 
-    // Draw painted tiles from SpaceTimeDB
-    for (const tile of tiles) {
-      if (tile.color === 0) continue; // Default white is handled above
-
-      // Frustum culling
+    // Group visible painted tiles by color (1..9) for batched rendering
+    const buckets: Array<Array<{ x: number; y: number }>> = Array.from({ length: 10 }, () => []);
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      if (tile.color === 0) continue;
       if (tile.x >= startX - 1 && tile.x <= endX + 1 && tile.y >= startY - 1 && tile.y <= endY + 1) {
-        // Color 0 is already handled above (as white in normal, true black in dark mode)
-        // For color 1 (Black), we want it to map to pure White in dark mode so it stands out against the black background.
-        let tileColor = COLORS[tile.color];
-        if (negativeMode && tile.color === 1) tileColor = '#FFFFFF';
-        
-        ctx.fillStyle = tileColor;
-        // Draw the tile full size (we will draw grid lines OVER them later)
-        ctx.fillRect(
-          tile.x * TILE_SIZE,
-          tile.y * TILE_SIZE,
-          TILE_SIZE,
-          TILE_SIZE
-        );
+        if (tile.color >= 1 && tile.color <= 9) {
+          buckets[tile.color].push(tile);
+        }
       }
     }
 
-    // Now draw the grid lines on top, but only if zoomed in enough
-    if (camera.zoom > 0.3) {
-      // The grid line color
-      ctx.strokeStyle = negativeMode ? '#374151' : '#E5E7EB';
-      ctx.lineWidth = 1 / camera.zoom; // Keep lines 1px wide regardless of zoom
+    // Batch draw each color with a single path and fill
+    for (let c = 1; c < 10; c++) {
+      const batch = buckets[c];
+      if (batch.length === 0) continue;
+      let tileColor = COLORS[c];
+      if (negativeMode && c === 1) tileColor = '#FFFFFF';
+      ctx.fillStyle = tileColor;
       ctx.beginPath();
-      
-      // Vertical lines
-      for (let x = startX; x <= endX + 1; x++) {
-        ctx.moveTo(x * TILE_SIZE, startY * TILE_SIZE);
-        ctx.lineTo(x * TILE_SIZE, (endY + 1) * TILE_SIZE);
+      for (let i = 0; i < batch.length; i++) {
+        const t = batch[i];
+        ctx.rect(t.x * TILE_SIZE, t.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
       }
-      
-      // Horizontal lines
-      for (let y = startY; y <= endY + 1; y++) {
-        ctx.moveTo(startX * TILE_SIZE, y * TILE_SIZE);
-        ctx.lineTo((endX + 1) * TILE_SIZE, y * TILE_SIZE);
+      ctx.fill();
+    }
+
+    // Draw grid lines on top only when zoomed in enough (camZoom > 0.4) with safe bounds
+    if (camZoom > 0.4) {
+      const lineCountX = endX - startX + 2;
+      const lineCountY = endY - startY + 2;
+      if (lineCountX > 0 && lineCountX <= 500 && lineCountY > 0 && lineCountY <= 500) {
+        ctx.strokeStyle = negativeMode ? '#374151' : '#E5E7EB';
+        ctx.lineWidth = 1 / camZoom;
+        ctx.beginPath();
+
+        for (let x = startX; x <= endX + 1; x++) {
+          ctx.moveTo(x * TILE_SIZE, startY * TILE_SIZE);
+          ctx.lineTo(x * TILE_SIZE, (endY + 1) * TILE_SIZE);
+        }
+
+        for (let y = startY; y <= endY + 1; y++) {
+          ctx.moveTo(startX * TILE_SIZE, y * TILE_SIZE);
+          ctx.lineTo((endX + 1) * TILE_SIZE, y * TILE_SIZE);
+        }
+
+        ctx.stroke();
       }
-      
-      ctx.stroke();
     }
 
     ctx.restore();
@@ -216,6 +238,7 @@ function App() {
 
   useEffect(() => {
     // Redraw every time data, camera, or selection changes
+    cameraRef.current = camera;
     scheduleDraw();
   }, [tiles, camera, clickedColorIndex, negativeMode]);
 
@@ -286,7 +309,7 @@ function App() {
       const two = getTwoFingerState();
       const prev = lastPinchState.current;
       if (two && prev) {
-        setCamera((c) => {
+        updateCamera((_c) => {
           const scale = two.distance / prev.distance;
           const newZoom = Math.min(5, Math.max(0.1, prev.zoom * scale));
           const wx = (prev.centerX - prev.cameraX) / prev.zoom;
@@ -311,7 +334,7 @@ function App() {
     if (isPanning.current) {
       const dx = e.clientX - lastMousePos.current.x;
       const dy = e.clientY - lastMousePos.current.y;
-      setCamera((c) => ({ ...c, x: c.x + dx, y: c.y + dy }));
+      updateCamera((c) => ({ ...c, x: c.x + dx, y: c.y + dy }));
       lastMousePos.current = { x: e.clientX, y: e.clientY };
     } else if (isDrawing.current && !wasTwoFingerGesture.current) {
       paintTile(e.clientX, e.clientY);
@@ -348,8 +371,9 @@ function App() {
     const localX = clientX - rect.left;
     const localY = clientY - rect.top;
 
-    const tx = Math.floor((localX - camera.x) / (TILE_SIZE * camera.zoom));
-    const ty = Math.floor((localY - camera.y) / (TILE_SIZE * camera.zoom));
+    const curCam = cameraRef.current;
+    const tx = Math.floor((localX - curCam.x) / (TILE_SIZE * curCam.zoom));
+    const ty = Math.floor((localY - curCam.y) / (TILE_SIZE * curCam.zoom));
 
     if (lastDrawnTile.current.x === tx && lastDrawnTile.current.y === ty) {
       return;
@@ -363,7 +387,7 @@ function App() {
   const activeColorIndex = clickedColorIndex;
 
   const handleWheel = (e: React.WheelEvent) => {
-    setCamera(c => {
+    updateCamera(c => {
       const zoomSensitivity = 0.001;
       const newZoom = Math.min(Math.max(0.1, c.zoom - e.deltaY * zoomSensitivity), 5);
 
@@ -382,7 +406,7 @@ function App() {
   const zoomIn = () => {
     const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
     const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
-    setCamera(c => {
+    updateCamera(c => {
       const newZoom = Math.min(5, c.zoom + zoomStep);
       const wx = (centerX - c.x) / c.zoom;
       const wy = (centerY - c.y) / c.zoom;
@@ -392,7 +416,7 @@ function App() {
   const zoomOut = () => {
     const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
     const centerY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
-    setCamera(c => {
+    updateCamera(c => {
       const newZoom = Math.max(0.1, c.zoom - zoomStep);
       const wx = (centerX - c.x) / c.zoom;
       const wy = (centerY - c.y) / c.zoom;

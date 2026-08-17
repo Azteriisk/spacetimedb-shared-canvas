@@ -83,7 +83,7 @@ export const setTileColor = spacetimedb.reducer(
     const existingTile = ctx.db.tile.coords.find(coords);
 
     if (existingTile) {
-      if (existingTile.clerk_id !== "" && existingTile.owner_identity !== owner_identity) {
+      if (existingTile.clerk_id !== "" && existingTile.clerk_id !== clerk_id) {
         throw new Error("Cannot overwrite a tile protected by another signed-in user.");
       }
       ctx.db.tile.coords.delete(coords);

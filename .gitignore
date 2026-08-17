@@ -34,3 +34,6 @@ _agents/
 .antigravity/
 .gemini/
 
+
+.vercel
+.env*
